@@ -103,6 +103,9 @@ if defined SOURCE_CODEX_HOME (
   echo        scripts\sync-codex.bat /no-install
 )
 
+call :adapt_config_paths
+if errorlevel 1 exit /b %ERRORLEVEL%
+
 call :refresh_plugins_from_config
 if errorlevel 1 exit /b %ERRORLEVEL%
 
@@ -289,10 +292,10 @@ if not exist "%ADAPT_SCRIPT%" (
 )
 
 echo.
-echo [STEP] Adapting restored Codex config paths for this Windows profile
-powershell -NoProfile -ExecutionPolicy Bypass -File "%ADAPT_SCRIPT%" -ConfigPath "%CODEX_HOME%\config.toml" -RepoRoot "%REPO_ROOT%"
+echo [STEP] Adapting restored Codex paths for this Windows profile
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ADAPT_SCRIPT%" -ConfigPath "%CODEX_HOME%\config.toml" -RepoRoot "%REPO_ROOT%" -CodexHome "%CODEX_HOME%" -IncludeState -EnsureProjectDirectories
 if errorlevel 1 (
-  echo [ERROR] Failed to adapt config.toml paths for this computer.
+  echo [ERROR] Failed to adapt Codex paths for this computer.
   exit /b 1
 )
 exit /b 0

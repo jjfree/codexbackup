@@ -62,7 +62,7 @@ sync-codex.bat /refresh-plugins
 
 The sync script first bootstraps Git, clones or pulls this repository into `%USERPROFILE%\Documents\Codex\codexbackup`, then runs the latest repository copy of `scripts\sync-codex.bat`. After that it runs `scripts\install-prereqs.bat`. Each package is installed and verified before the next package starts. If any step fails, the script prints an error and stops.
 
-After restoring the versioned Codex config, the sync script adapts source-machine project paths from `C:\Users\James` to the current Windows `%USERPROFILE%` and adds the checked-out `codexbackup` repository as a trusted project. If a project lives somewhere other than the same relative path under your profile, update that project entry manually after restore.
+After restoring the versioned Codex config and any private local state, the sync script adapts source-machine project paths from `C:\Users\James` to the current Windows `%USERPROFILE%`, adds the checked-out `codexbackup` repository as a trusted project, and creates missing trusted project directories so restored conversations do not open with a missing-working-directory error. If a project lives somewhere other than the same relative path under your profile, update that project entry manually after restore.
 
 Because private restore overwrites Codex auth/session/SQLite files, close Codex before running the restore when you are restoring `C:\envbk`. If you use Codex to coordinate the work on the new computer, have it prepare the command, then run the final restore from an Administrator terminal after closing Codex.
 

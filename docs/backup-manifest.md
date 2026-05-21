@@ -18,7 +18,7 @@ This repo separates safe, versioned restore data from private, local-only Codex 
 - `scripts/sync-codex.bat`
   - Restore/sync entrypoint for the target computer.
 - `scripts/adapt-codex-config.ps1`
-  - Rewrites restored source-machine Codex project paths for the current Windows profile and trusts the local `codexbackup` checkout.
+  - Rewrites restored source-machine Codex project paths for the current Windows profile, trusts the local `codexbackup` checkout, repairs restored session/global-state paths, and creates missing trusted project directories.
 - `scripts/backup-local-codex.bat`
   - Local-only exporter for sensitive Codex auth/session/SQLite data.
 - `docs/environment-inventory.md`
