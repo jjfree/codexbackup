@@ -12,6 +12,7 @@ The repo intentionally stores only safe, versionable configuration and scripts. 
 - Codex `config.toml` with enabled plugins.
 - Codex global `AGENTS.md`.
 - User-installed Playwright CLI skill.
+- Private local Codex backup export to `C:\envbk`.
 - Optional local Codex history/state sync from a private backup path.
 
 ## Enabled Codex Plugins
@@ -32,6 +33,25 @@ Marketplace/runtime source paths are deliberately omitted because they are machi
 
 ## Quick Start On The New Computer
 
+Prerequisites before restore:
+
+- Windows 10/11 with virtualization enabled in BIOS/UEFI.
+- Codex app installed and launched at least once.
+- Docker Desktop installed, or allow the installer to install/verify it.
+- Internet access for `winget`, WSL, Docker, and Codex plugin/runtime downloads.
+- Administrator terminal for WSL and Windows feature installation.
+- If you need real login/session restoration, copy the old computer's `C:\envbk` folder to the new computer as `C:\envbk`.
+
+Recommended restore order:
+
+1. On the old computer, close Codex and run `scripts\backup-local-codex.bat`.
+2. Copy `C:\envbk` to the new computer as `C:\envbk`.
+3. On the new computer, clone this repository.
+4. Open an Administrator terminal in the repository.
+5. Run `scripts\sync-codex.bat /refresh-plugins`.
+6. Reboot if the WSL/VirtualMachinePlatform step asks for it, then rerun the same command.
+7. Open Codex and sign in again if restored auth is rejected or connector sessions need re-consent.
+
 Open an Administrator terminal from this repo and run:
 
 ```bat
@@ -50,29 +70,70 @@ Use `/no-install` when prerequisites are already handled:
 scripts\sync-codex.bat /no-install /refresh-plugins
 ```
 
-## Optional Private Codex History Sync
+## Back Up The Old Computer's Private Codex Data
 
-If you have an encrypted or external backup of the old `%USERPROFILE%\.codex`, close Codex on both machines, then run:
+On the old computer, close Codex first, then run:
 
 ```bat
-set SOURCE_CODEX_HOME=E:\codex-private-backup\.codex
-scripts\sync-codex.bat /no-install /refresh-plugins
+scripts\backup-local-codex.bat
 ```
 
-This can sync:
+If Windows blocks creating `C:\envbk`, rerun the terminal as Administrator.
 
+This exports private Codex data to:
+
+```text
+C:\envbk\codex-home-private
+```
+
+The backup includes real local state such as:
+
+- `auth.json`
+- `cap_sid`
+- `installation_id`
+- `.codex-global-state.json`
+- `session_index.jsonl`
+- `models_cache.json`
+- `logs_2.sqlite*`
+- `state_5.sqlite*`
 - `sessions`
 - `archived_sessions`
 - `memories`
 - `rules`
 - `skills`
+- `.sandbox-secrets`
+- `cache`
+
+Treat `C:\envbk` as sensitive. It may contain login tokens, connector auth state, prompt history, local conversation DBs, and project metadata. Store it on BitLocker, an encrypted archive, or trusted offline media.
+
+## Optional Private Codex History Sync
+
+If `C:\envbk\codex-home-private` exists on the new computer, `scripts\sync-codex.bat` automatically restores it. You can also provide another backup path:
+
+```bat
+set SOURCE_CODEX_HOME=E:\codex-home-private
+scripts\sync-codex.bat /no-install /refresh-plugins
+```
+
+This can sync:
+
+- `auth.json`
+- `cap_sid`
+- `installation_id`
+- `sessions`
+- `archived_sessions`
+- `memories`
+- `rules`
+- `skills`
+- `.sandbox-secrets`
+- `cache`
 - `session_index.jsonl`
 - `models_cache.json`
 - `.codex-global-state.json`
 - `logs_2.sqlite*`
 - `state_5.sqlite*`
 
-It excludes common secrets such as `auth.json`, `cap_sid`, `.sandbox-secrets`, `.env`, and plugin cache.
+This private restore intentionally includes Codex auth/session files when they exist in the private backup. It still avoids project `.env` files and plugin cache.
 
 ## Sensitive Data Boundary
 
@@ -85,7 +146,7 @@ Do not commit:
 - API keys, cookies, tokens, or connector credentials
 - unencrypted private conversation/state backups
 
-Sign in again on the target computer for Codex, GitHub, Google Drive, Figma, Linear, and other connectors.
+If you do not restore `C:\envbk`, sign in again on the target computer for Codex, GitHub, Google Drive, Figma, Linear, and other connectors. Even with `C:\envbk`, some connector sessions may still require re-consent on the new machine.
 
 ## WSL 2 Notes
 
