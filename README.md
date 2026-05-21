@@ -47,19 +47,20 @@ Recommended restore order:
 
 1. On the old computer, close Codex and run `scripts\backup-local-codex.bat`.
 2. Copy `C:\envbk` to the new computer as `C:\envbk`.
-3. On the new computer, clone this repository.
-4. Open an Administrator terminal in the repository.
-5. Run `scripts\sync-codex.bat /refresh-plugins`.
+3. On the new computer, download only `scripts\sync-codex.bat` from this repository.
+4. Open an Administrator terminal in the folder containing the downloaded file.
+5. Run `sync-codex.bat /refresh-plugins`.
 6. Reboot if the WSL/VirtualMachinePlatform step asks for it, then rerun the same command.
 7. Open Codex and sign in again if restored auth is rejected or connector sessions need re-consent.
 
-Open an Administrator terminal from this repo and run:
+If you want to download from a terminal, use:
 
 ```bat
-scripts\sync-codex.bat /refresh-plugins
+curl.exe -L -o sync-codex.bat https://raw.githubusercontent.com/jjfree/codexbackup/main/scripts/sync-codex.bat
+sync-codex.bat /refresh-plugins
 ```
 
-The sync script first runs `scripts\install-prereqs.bat`. Each package is installed and verified before the next package starts. If any step fails, the script prints an error and stops.
+The sync script first bootstraps Git, clones or pulls this repository into `%USERPROFILE%\Documents\Codex\codexbackup`, then runs the latest repository copy of `scripts\sync-codex.bat`. After that it runs `scripts\install-prereqs.bat`. Each package is installed and verified before the next package starts. If any step fails, the script prints an error and stops.
 
 Because private restore overwrites Codex auth/session/SQLite files, close Codex before running the restore when you are restoring `C:\envbk`. If you use Codex to coordinate the work on the new computer, have it prepare the command, then run the final restore from an Administrator terminal after closing Codex.
 

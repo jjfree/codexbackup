@@ -2,7 +2,10 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
-set "REPO_ROOT=%~dp0.."
+set "SCRIPT_DIR=%~dp0"
+set "REPO_URL=https://github.com/jjfree/codexbackup.git"
+set "DEFAULT_REPO_ROOT=%USERPROFILE%\Documents\Codex\codexbackup"
+set "REPO_ROOT=%SCRIPT_DIR%.."
 for %%I in ("%REPO_ROOT%") do set "REPO_ROOT=%%~fI"
 set "CODEX_HOME=%USERPROFILE%\.codex"
 set "SNAPSHOT_HOME=%REPO_ROOT%\codex-home"
@@ -10,10 +13,17 @@ set "DEFAULT_PRIVATE_BACKUP=C:\envbk\codex-home-private"
 set "LOG_DIR=%REPO_ROOT%\restore-logs"
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%I"
 
-if /I "%~1"=="/refresh-plugins" set "CODEX_REFRESH_PLUGINS=1"
-if /I "%~1"=="/no-install" set "CODEX_SKIP_INSTALL=1"
-if /I "%~2"=="/refresh-plugins" set "CODEX_REFRESH_PLUGINS=1"
-if /I "%~2"=="/no-install" set "CODEX_SKIP_INSTALL=1"
+for %%A in (%*) do (
+  if /I "%%~A"=="/refresh-plugins" set "CODEX_REFRESH_PLUGINS=1"
+  if /I "%%~A"=="/no-install" set "CODEX_SKIP_INSTALL=1"
+  if /I "%%~A"=="/skip-bootstrap" set "CODEX_SKIP_BOOTSTRAP=1"
+  if /I "%%~A"=="/skip-git-pull" set "CODEX_SKIP_GIT_PULL=1"
+)
+
+if not defined CODEX_SKIP_BOOTSTRAP (
+  call :bootstrap_latest_repo %*
+  exit /b !ERRORLEVEL!
+)
 
 echo ============================================================
 echo Codex backup restore and sync
@@ -97,6 +107,139 @@ echo.
 echo [OK] Codex restore and sync completed.
 echo [NEXT] Open Codex. It should read config.toml and install/enable the configured plugins.
 echo        If this is the first run on the target computer, sign in again to GitHub, Google Drive, Figma, and Linear.
+exit /b 0
+
+:bootstrap_latest_repo
+echo ============================================================
+echo Codex backup bootstrap
+echo ============================================================
+echo.
+
+set "FULL_REPO=0"
+if exist "%REPO_ROOT%\.git" if exist "%REPO_ROOT%\codex-home\config.toml" if exist "%REPO_ROOT%\scripts\install-prereqs.bat" set "FULL_REPO=1"
+
+call :ensure_bootstrap_git
+if errorlevel 1 exit /b !ERRORLEVEL!
+
+if "%FULL_REPO%"=="1" (
+  echo [STEP] Updating existing codexbackup repository: %REPO_ROOT%
+  if defined CODEX_SKIP_GIT_PULL (
+    echo [INFO] /skip-git-pull selected. Repository update skipped.
+  ) else (
+    call :pull_repo "%REPO_ROOT%"
+    if errorlevel 1 exit /b !ERRORLEVEL!
+  )
+  echo [STEP] Restarting latest sync script from repository.
+  call "%REPO_ROOT%\scripts\sync-codex.bat" /skip-bootstrap /skip-git-pull %*
+  exit /b !ERRORLEVEL!
+)
+
+echo [INFO] This script is not running from a full git checkout.
+echo [INFO] Repository will be cloned or updated at:
+echo        %DEFAULT_REPO_ROOT%
+echo.
+
+if exist "%DEFAULT_REPO_ROOT%\.git" (
+  if defined CODEX_SKIP_GIT_PULL (
+    echo [INFO] /skip-git-pull selected. Existing repository update skipped.
+  ) else (
+    call :pull_repo "%DEFAULT_REPO_ROOT%"
+    if errorlevel 1 exit /b !ERRORLEVEL!
+  )
+) else (
+  if exist "%DEFAULT_REPO_ROOT%" (
+    echo [ERROR] %DEFAULT_REPO_ROOT% exists but is not a git repository.
+    echo         Move it aside or remove it, then rerun this script.
+    exit /b 1
+  )
+  for %%I in ("%DEFAULT_REPO_ROOT%\..") do set "DEFAULT_REPO_PARENT=%%~fI"
+  if not exist "!DEFAULT_REPO_PARENT!" mkdir "!DEFAULT_REPO_PARENT!"
+  if errorlevel 1 (
+    echo [ERROR] Failed to create !DEFAULT_REPO_PARENT!.
+    exit /b 1
+  )
+  echo [STEP] Cloning %REPO_URL%
+  git clone "%REPO_URL%" "%DEFAULT_REPO_ROOT%"
+  if errorlevel 1 (
+    echo [ERROR] Failed to clone %REPO_URL%.
+    exit /b 1
+  )
+)
+
+if not exist "%DEFAULT_REPO_ROOT%\scripts\sync-codex.bat" (
+  echo [ERROR] Cloned repository does not contain scripts\sync-codex.bat.
+  exit /b 1
+)
+
+echo [STEP] Starting repository sync script.
+call "%DEFAULT_REPO_ROOT%\scripts\sync-codex.bat" /skip-bootstrap /skip-git-pull %*
+exit /b !ERRORLEVEL!
+
+:ensure_bootstrap_git
+if exist "%ProgramFiles%\Git\cmd\git.exe" set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
+if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+
+where git >nul 2>&1
+if not errorlevel 1 (
+  git --version
+  echo [OK] Git is available.
+  exit /b 0
+)
+
+echo [STEP] Git was not found. Installing Git first so the repository can be cloned or pulled.
+where winget >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] winget was not found. Install "App Installer" from Microsoft Store, then rerun this script.
+  exit /b 1
+)
+
+winget install --exact --id Git.Git --accept-package-agreements --accept-source-agreements --silent
+if errorlevel 1 (
+  echo [ERROR] Failed to install Git.Git via winget.
+  exit /b 1
+)
+
+if exist "%ProgramFiles%\Git\cmd\git.exe" set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
+if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+
+where git >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Git was installed but is still not on PATH. Restart terminal or reboot, then rerun this script.
+  exit /b 1
+)
+
+git --version
+echo [OK] Git installed and verified.
+exit /b 0
+
+:pull_repo
+set "TARGET_REPO=%~1"
+echo [STEP] Pulling latest main branch in %TARGET_REPO%
+git -C "%TARGET_REPO%" remote get-url origin >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] %TARGET_REPO% has no usable origin remote.
+  exit /b 1
+)
+
+git -C "%TARGET_REPO%" fetch origin main
+if errorlevel 1 (
+  echo [ERROR] Failed to fetch origin/main.
+  exit /b 1
+)
+
+git -C "%TARGET_REPO%" checkout main
+if errorlevel 1 (
+  echo [ERROR] Failed to checkout main branch.
+  exit /b 1
+)
+
+git -C "%TARGET_REPO%" pull --ff-only origin main
+if errorlevel 1 (
+  echo [ERROR] Failed to fast-forward pull origin/main.
+  echo         Resolve local repo changes or reclone the repository, then rerun.
+  exit /b 1
+)
+echo [OK] Repository is up to date.
 exit /b 0
 
 :backup_file
