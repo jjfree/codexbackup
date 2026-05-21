@@ -1,0 +1,209 @@
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+chcp 65001 >nul
+
+set "REPO_ROOT=%~dp0.."
+for %%I in ("%REPO_ROOT%") do set "REPO_ROOT=%%~fI"
+set "CODEX_HOME=%USERPROFILE%\.codex"
+set "SNAPSHOT_HOME=%REPO_ROOT%\codex-home"
+set "LOG_DIR=%REPO_ROOT%\restore-logs"
+for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%I"
+
+if /I "%~1"=="/refresh-plugins" set "CODEX_REFRESH_PLUGINS=1"
+if /I "%~1"=="/no-install" set "CODEX_SKIP_INSTALL=1"
+if /I "%~2"=="/refresh-plugins" set "CODEX_REFRESH_PLUGINS=1"
+if /I "%~2"=="/no-install" set "CODEX_SKIP_INSTALL=1"
+
+echo ============================================================
+echo Codex backup restore and sync
+echo ============================================================
+echo Repository: %REPO_ROOT%
+echo Target Codex home: %CODEX_HOME%
+echo.
+
+if not defined CODEX_SKIP_INSTALL (
+  call "%REPO_ROOT%\scripts\install-prereqs.bat"
+  if errorlevel 1 (
+    echo [ERROR] Prerequisite installation failed. Sync stopped.
+    exit /b 1
+  )
+) else (
+  echo [INFO] /no-install selected. Skipping prerequisite installer.
+)
+
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+if not exist "%CODEX_HOME%" mkdir "%CODEX_HOME%"
+
+call :backup_file "%CODEX_HOME%\config.toml"
+if errorlevel 1 exit /b %ERRORLEVEL%
+call :backup_file "%CODEX_HOME%\AGENTS.md"
+if errorlevel 1 exit /b %ERRORLEVEL%
+
+echo.
+echo [STEP] Restoring versioned Codex settings
+copy /Y "%SNAPSHOT_HOME%\config.toml" "%CODEX_HOME%\config.toml" >nul
+if errorlevel 1 (
+  echo [ERROR] Failed to copy config.toml.
+  exit /b 1
+)
+copy /Y "%SNAPSHOT_HOME%\AGENTS.md" "%CODEX_HOME%\AGENTS.md" >nul
+if errorlevel 1 (
+  echo [ERROR] Failed to copy AGENTS.md.
+  exit /b 1
+)
+echo [OK] config.toml and AGENTS.md restored.
+
+if exist "%SNAPSHOT_HOME%\skills" (
+  call :sync_dir "%SNAPSHOT_HOME%\skills" "%CODEX_HOME%\skills" "user skills"
+  if errorlevel 1 exit /b !ERRORLEVEL!
+)
+
+if exist "%SNAPSHOT_HOME%\rules" (
+  call :sync_dir "%SNAPSHOT_HOME%\rules" "%CODEX_HOME%\rules" "rules"
+  if errorlevel 1 exit /b !ERRORLEVEL!
+)
+
+if exist "%SNAPSHOT_HOME%\memories" (
+  call :sync_dir "%SNAPSHOT_HOME%\memories" "%CODEX_HOME%\memories" "memories"
+  if errorlevel 1 exit /b !ERRORLEVEL!
+)
+
+if defined SOURCE_CODEX_HOME (
+  call :sync_private_codex_home "%SOURCE_CODEX_HOME%"
+  if errorlevel 1 exit /b !ERRORLEVEL!
+) else (
+  echo.
+  echo [INFO] SOURCE_CODEX_HOME is not set.
+  echo        To sync private local history from an external backup, rerun like:
+  echo        set SOURCE_CODEX_HOME=E:\codex-private-backup\.codex
+  echo        scripts\sync-codex.bat /no-install
+)
+
+call :refresh_plugins_from_config
+if errorlevel 1 exit /b %ERRORLEVEL%
+
+echo.
+echo [OK] Codex restore and sync completed.
+echo [NEXT] Open Codex. It should read config.toml and install/enable the configured plugins.
+echo        If this is the first run on the target computer, sign in again to GitHub, Google Drive, Figma, and Linear.
+exit /b 0
+
+:backup_file
+set "FILE=%~1"
+if exist "%FILE%" (
+  copy /Y "%FILE%" "%FILE%.before-codexbackup-%STAMP%.bak" >nul
+  if errorlevel 1 (
+    echo [ERROR] Failed to back up %FILE%.
+    exit /b 1
+  )
+  echo [OK] Backed up %FILE%.
+)
+exit /b 0
+
+:sync_dir
+set "SRC=%~1"
+set "DST=%~2"
+set "LABEL=%~3"
+echo.
+echo [STEP] Comparing %LABEL%
+robocopy "%SRC%" "%DST%" /E /L /NJH /NJS /NP /XD .sandbox .sandbox-secrets .tmp plugins\cache /XF auth.json cap_sid *.sqlite *.sqlite-shm *.sqlite-wal *.log .env .env.* > "%LOG_DIR%\compare-%LABEL%-%STAMP%.log"
+set "RC=%ERRORLEVEL%"
+if %RC% GEQ 8 (
+  echo [ERROR] Robocopy compare failed for %LABEL%. Exit code: %RC%
+  exit /b %RC%
+)
+
+echo [STEP] Syncing %LABEL%
+robocopy "%SRC%" "%DST%" /E /NJH /NJS /NP /XD .sandbox .sandbox-secrets .tmp plugins\cache /XF auth.json cap_sid *.sqlite *.sqlite-shm *.sqlite-wal *.log .env .env.* > "%LOG_DIR%\sync-%LABEL%-%STAMP%.log"
+set "RC=%ERRORLEVEL%"
+if %RC% GEQ 8 (
+  echo [ERROR] Robocopy sync failed for %LABEL%. Exit code: %RC%
+  exit /b %RC%
+)
+echo [OK] %LABEL% synced. Compare and sync logs are in restore-logs.
+exit /b 0
+
+:sync_private_codex_home
+set "SRC_HOME=%~1"
+echo.
+echo [STEP] Syncing private Codex data from %SRC_HOME%
+if not exist "%SRC_HOME%" (
+  echo [ERROR] SOURCE_CODEX_HOME does not exist: %SRC_HOME%
+  exit /b 1
+)
+
+echo [WARN] Close Codex on both computers before syncing sessions or SQLite state.
+call :sync_optional_dir "%SRC_HOME%\sessions" "%CODEX_HOME%\sessions" "sessions"
+call :sync_optional_dir "%SRC_HOME%\archived_sessions" "%CODEX_HOME%\archived_sessions" "archived-sessions"
+call :sync_optional_dir "%SRC_HOME%\memories" "%CODEX_HOME%\memories" "private-memories"
+call :sync_optional_dir "%SRC_HOME%\rules" "%CODEX_HOME%\rules" "private-rules"
+call :sync_optional_dir "%SRC_HOME%\skills" "%CODEX_HOME%\skills" "private-skills"
+
+for %%F in (session_index.jsonl models_cache.json .codex-global-state.json .codex-global-state.json.bak logs_2.sqlite logs_2.sqlite-shm logs_2.sqlite-wal state_5.sqlite state_5.sqlite-shm state_5.sqlite-wal) do (
+  if exist "%SRC_HOME%\%%F" (
+    copy /Y "%SRC_HOME%\%%F" "%CODEX_HOME%\%%F" >nul
+    if errorlevel 1 (
+      echo [ERROR] Failed to sync %%F.
+      exit /b 1
+    )
+    echo [OK] Synced %%F.
+  )
+)
+exit /b 0
+
+:sync_optional_dir
+set "SRC=%~1"
+set "DST=%~2"
+set "LABEL=%~3"
+if exist "%SRC%" (
+  call :sync_dir "%SRC%" "%DST%" "%LABEL%"
+  if errorlevel 1 exit /b !ERRORLEVEL!
+) else (
+  echo [INFO] Skipping missing optional directory: %SRC%
+)
+exit /b 0
+
+:refresh_plugins_from_config
+echo.
+echo [STEP] Checking plugin enablement from config.toml
+findstr /R /C:"^\[plugins\." "%CODEX_HOME%\config.toml"
+if errorlevel 1 (
+  echo [ERROR] No [plugins.*] sections found in %CODEX_HOME%\config.toml.
+  exit /b 1
+)
+
+if defined CODEX_REFRESH_PLUGINS (
+  echo.
+  echo [STEP] Preparing Codex plugin reinstall from config.toml
+  if exist "%CODEX_HOME%\plugins\cache" (
+    set "PLUGIN_BACKUP=%CODEX_HOME%\plugins\cache.before-refresh-%STAMP%"
+    move "%CODEX_HOME%\plugins\cache" "!PLUGIN_BACKUP!" >nul
+    if errorlevel 1 (
+      echo [ERROR] Failed to move existing plugin cache.
+      exit /b 1
+    )
+    echo [OK] Existing plugin cache moved to !PLUGIN_BACKUP!
+  )
+  mkdir "%CODEX_HOME%\plugins\cache" >nul 2>&1
+) else (
+  echo [INFO] Plugin cache was not moved. Add /refresh-plugins to force Codex to reinstall plugin cache.
+)
+
+call :launch_codex_for_plugins
+exit /b 0
+
+:launch_codex_for_plugins
+echo.
+echo [STEP] Launching Codex so it can install/enable plugins from config.toml
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$cmd = Get-Command codex -ErrorAction SilentlyContinue; if ($cmd) { Start-Process -FilePath $cmd.Source; exit 0 } else { exit 2 }"
+set "RC=%ERRORLEVEL%"
+if "%RC%"=="2" (
+  echo [WARN] Codex command was not found on PATH. Open Codex manually to complete plugin installation.
+  exit /b 0
+)
+if not "%RC%"=="0" (
+  echo [WARN] Codex launch failed. Open Codex manually to complete plugin installation.
+  exit /b 0
+)
+echo [OK] Codex launch requested. Plugin installation happens inside Codex using config.toml.
+exit /b 0

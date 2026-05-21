@@ -1,0 +1,17 @@
+*.log
+*.tmp
+*.bak
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+.env.*
+!*.env.example
+auth.json
+cap_sid
+.sandbox/
+.sandbox-secrets/
+.tmp/
+private-backups/
+restore-logs/
+incoming-codex-home/

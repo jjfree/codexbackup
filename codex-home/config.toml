@@ -1,0 +1,65 @@
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+
+# This file intentionally omits machine-local marketplace source paths.
+# Codex should recreate marketplace/runtime paths on the target computer.
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."superpowers@openai-curated"]
+enabled = true
+
+[plugins."figma@openai-curated"]
+enabled = true
+
+[plugins."linear@openai-curated"]
+enabled = true
+
+[plugins."google-drive@openai-curated"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[windows]
+sandbox = "elevated"
+
+[projects.'c:\users\james\documents\new project']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\new project 2']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-06\plus']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-11\vmmenwsl']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-11\chrome-2g-2g']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-12\size-prompt-git-commit-put-token']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\new project 3']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-18\5-macd-git-project']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\亞洲社交app']
+trust_level = "trusted"
+
+[projects.'c:\users\james\documents\codex\2026-05-21\codex-codex']
+trust_level = "trusted"
