@@ -47,4 +47,4 @@ Snapshot date: 2026-05-21
 - `C:\Users\James\Documents\亞洲社交APP`
 - `C:\Users\James\Documents\Codex\2026-05-21\codex-codex`
 
-Update these paths on the target computer if the Windows username or project locations differ.
+During restore, `scripts/sync-codex.bat` rewrites the source profile prefix from `C:\Users\James` to the target computer's `%USERPROFILE%` and trusts the local `codexbackup` checkout. Update any project entries manually if their relative locations differ on the target computer.

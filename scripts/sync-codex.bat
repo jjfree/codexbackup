@@ -64,6 +64,9 @@ if errorlevel 1 (
 )
 echo [OK] config.toml and AGENTS.md restored.
 
+call :adapt_config_paths
+if errorlevel 1 exit /b %ERRORLEVEL%
+
 if exist "%SNAPSHOT_HOME%\skills" (
   call :sync_dir "%SNAPSHOT_HOME%\skills" "%CODEX_HOME%\skills" "user skills"
   if errorlevel 1 exit /b !ERRORLEVEL!
@@ -276,6 +279,22 @@ if %RC% GEQ 8 (
   exit /b %RC%
 )
 echo [OK] %LABEL% synced. Compare and sync logs are in restore-logs.
+exit /b 0
+
+:adapt_config_paths
+set "ADAPT_SCRIPT=%REPO_ROOT%\scripts\adapt-codex-config.ps1"
+if not exist "%ADAPT_SCRIPT%" (
+  echo [ERROR] Config path adapter was not found: %ADAPT_SCRIPT%
+  exit /b 1
+)
+
+echo.
+echo [STEP] Adapting restored Codex config paths for this Windows profile
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ADAPT_SCRIPT%" -ConfigPath "%CODEX_HOME%\config.toml" -RepoRoot "%REPO_ROOT%"
+if errorlevel 1 (
+  echo [ERROR] Failed to adapt config.toml paths for this computer.
+  exit /b 1
+)
 exit /b 0
 
 :sync_private_codex_home
