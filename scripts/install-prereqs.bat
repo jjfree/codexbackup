@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
 echo ============================================================
@@ -21,7 +21,7 @@ call :ensure_ubuntu
 if errorlevel 1 exit /b %ERRORLEVEL%
 call :ensure_winget_package Git.Git git "git --version"
 if errorlevel 1 exit /b %ERRORLEVEL%
-call :ensure_winget_package OpenJS.NodeJS.LTS node "node --version"
+call :ensure_node22
 if errorlevel 1 exit /b %ERRORLEVEL%
 call :ensure_npm
 if errorlevel 1 exit /b %ERRORLEVEL%
@@ -168,17 +168,65 @@ exit /b 0
 :ensure_npm
 echo.
 echo [STEP] Checking npm
-where npm >nul 2>&1
+where npm.cmd >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] Node.js is present but npm was not found on PATH. Restart terminal or reinstall Node.js LTS.
+  echo [ERROR] Node.js is present but npm.cmd was not found on PATH. Restart terminal or reinstall Node.js 22.
   exit /b 1
 )
-npm --version
+npm.cmd --version
 if errorlevel 1 (
   echo [ERROR] npm verification failed.
   exit /b 1
 )
 echo [OK] npm is available.
+exit /b 0
+
+:ensure_node22
+echo.
+echo [STEP] Checking Node.js 22
+set "NODE_VERSION="
+where node >nul 2>&1
+if not errorlevel 1 (
+  for /f "tokens=*" %%V in ('node --version 2^>nul') do set "NODE_VERSION=%%V"
+  echo !NODE_VERSION! | findstr /B /C:"v22." >nul 2>&1
+  if not errorlevel 1 (
+    echo !NODE_VERSION!
+    echo [OK] Node.js 22 is already installed.
+    exit /b 0
+  )
+  if defined NODE_VERSION (
+    echo [ERROR] Node.js is installed, but it is !NODE_VERSION! instead of v22.x.
+    echo         Install Node.js 22 or adjust PATH before rerunning this script.
+    exit /b 1
+  )
+)
+
+echo [INFO] Installing Node.js 22.14.0 LTS ...
+winget install --exact --id OpenJS.NodeJS.LTS --version 22.14.0 --accept-package-agreements --accept-source-agreements --silent
+if errorlevel 1 (
+  echo [WARN] OpenJS.NodeJS.LTS 22.14.0 was not available. Trying OpenJS.NodeJS 22.14.0 ...
+  winget install --exact --id OpenJS.NodeJS --version 22.14.0 --accept-package-agreements --accept-source-agreements --silent
+)
+if errorlevel 1 (
+  echo [WARN] OpenJS.NodeJS 22.14.0 was not available. Trying OpenJS.NodeJS.22 ...
+  winget install --exact --id OpenJS.NodeJS.22 --accept-package-agreements --accept-source-agreements --silent
+)
+if errorlevel 1 (
+  echo [ERROR] Failed to install Node.js 22 via winget.
+  echo         Install Node.js 22 manually from https://nodejs.org/ and rerun this script.
+  exit /b 1
+)
+
+set "NODE_VERSION="
+for /f "tokens=*" %%V in ('node --version 2^>nul') do set "NODE_VERSION=%%V"
+echo !NODE_VERSION! | findstr /B /C:"v22." >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Node.js installed but version check did not return v22.x. Current: !NODE_VERSION!
+  echo         Restart terminal or install Node.js 22 manually, then rerun this script.
+  exit /b 1
+)
+echo !NODE_VERSION!
+echo [OK] Node.js 22 installed and verified.
 exit /b 0
 
 :ensure_python312

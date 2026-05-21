@@ -43,24 +43,28 @@ if errorlevel 1 (
 )
 
 echo [STEP] Backing up Codex auth and token-bearing files
-call :copy_optional_file auth.json
+call :copy_required_file auth.json
 if errorlevel 1 exit /b !ERRORLEVEL!
 call :copy_optional_file cap_sid
 if errorlevel 1 exit /b !ERRORLEVEL!
 call :copy_optional_file installation_id
 if errorlevel 1 exit /b !ERRORLEVEL!
-call :copy_optional_file .codex-global-state.json
+call :copy_required_file .codex-global-state.json
 if errorlevel 1 exit /b !ERRORLEVEL!
 call :copy_optional_file .codex-global-state.json.bak
 if errorlevel 1 exit /b !ERRORLEVEL!
-call :copy_optional_file session_index.jsonl
+call :copy_required_file session_index.jsonl
 if errorlevel 1 exit /b !ERRORLEVEL!
 call :copy_optional_file models_cache.json
 if errorlevel 1 exit /b !ERRORLEVEL!
 
 echo.
 echo [STEP] Backing up SQLite conversation/state databases
-for %%F in (logs_2.sqlite logs_2.sqlite-shm logs_2.sqlite-wal state_5.sqlite state_5.sqlite-shm state_5.sqlite-wal) do (
+for %%F in (logs_2.sqlite state_5.sqlite) do (
+  call :copy_required_file %%F
+  if errorlevel 1 exit /b !ERRORLEVEL!
+)
+for %%F in (logs_2.sqlite-shm logs_2.sqlite-wal state_5.sqlite-shm state_5.sqlite-wal) do (
   call :copy_optional_file %%F
   if errorlevel 1 exit /b !ERRORLEVEL!
 )
@@ -116,6 +120,21 @@ if exist "%CODEX_HOME%\%NAME%" (
 ) else (
   echo [INFO] Missing optional file: %NAME%
 )
+exit /b 0
+
+:copy_required_file
+set "NAME=%~1"
+if not exist "%CODEX_HOME%\%NAME%" (
+  echo [ERROR] Required Codex file is missing: %NAME%
+  echo         Close Codex, confirm %CODEX_HOME% is the active Codex home, then rerun.
+  exit /b 1
+)
+copy /Y "%CODEX_HOME%\%NAME%" "%BACKUP_HOME%\%NAME%" >nul
+if errorlevel 1 (
+  echo [ERROR] Failed to copy required file %NAME%.
+  exit /b 1
+)
+echo [OK] Copied required file %NAME%.
 exit /b 0
 
 :backup_optional_dir

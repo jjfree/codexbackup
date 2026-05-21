@@ -8,7 +8,7 @@ The repo intentionally stores only safe, versionable configuration and scripts. 
 
 - Windows prerequisites for Codex development work.
 - WSL 2 and Ubuntu for Docker Desktop / Linux container workflows.
-- Git, Node.js LTS, npm, PowerShell 7, GitHub CLI, Python 3.12, and Docker Desktop.
+- Git, Node.js 22, npm, PowerShell 7, GitHub CLI, Python 3.12, and Docker Desktop.
 - Codex `config.toml` with enabled plugins.
 - Codex global `AGENTS.md`.
 - User-installed Playwright CLI skill.
@@ -40,6 +40,7 @@ Prerequisites before restore:
 - Docker Desktop installed, or allow the installer to install/verify it.
 - Internet access for `winget`, WSL, Docker, and Codex plugin/runtime downloads.
 - Administrator terminal for WSL and Windows feature installation.
+- Node.js must resolve to `v22.x`; the installer attempts `22.14.0` and stops if another major version is on PATH.
 - If you need real login/session restoration, copy the old computer's `C:\envbk` folder to the new computer as `C:\envbk`.
 
 Recommended restore order:
@@ -60,6 +61,8 @@ scripts\sync-codex.bat /refresh-plugins
 
 The sync script first runs `scripts\install-prereqs.bat`. Each package is installed and verified before the next package starts. If any step fails, the script prints an error and stops.
 
+Because private restore overwrites Codex auth/session/SQLite files, close Codex before running the restore when you are restoring `C:\envbk`. If you use Codex to coordinate the work on the new computer, have it prepare the command, then run the final restore from an Administrator terminal after closing Codex.
+
 Use `/refresh-plugins` when you want Codex to rebuild plugin cache from `config.toml`. The script moves the existing plugin cache aside instead of deleting it, then launches Codex so the app can install/enable the configured plugins.
 
 Codex plugin installation is completed by the Codex app itself. The script's job is to restore `config.toml`, optionally move old plugin cache aside, and launch Codex so it can reinstall and enable the plugins declared in `[plugins.*]`.
@@ -79,6 +82,8 @@ scripts\backup-local-codex.bat
 ```
 
 If Windows blocks creating `C:\envbk`, rerun the terminal as Administrator.
+
+The backup script treats `auth.json`, `.codex-global-state.json`, `session_index.jsonl`, `logs_2.sqlite`, and `state_5.sqlite` as required. If any required file is missing, the script stops instead of producing a misleading partial backup.
 
 This exports private Codex data to:
 
