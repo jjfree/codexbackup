@@ -178,6 +178,7 @@ exit /b !ERRORLEVEL!
 :ensure_bootstrap_git
 if exist "%ProgramFiles%\Git\cmd\git.exe" set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
 if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+if exist "%LocalAppData%\Microsoft\WindowsApps\winget.exe" set "PATH=%LocalAppData%\Microsoft\WindowsApps;%PATH%"
 
 where git >nul 2>&1
 if not errorlevel 1 (

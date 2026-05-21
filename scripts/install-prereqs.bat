@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
+call :refresh_known_tool_paths
 
 echo ============================================================
 echo Codex Windows prerequisite installer
@@ -135,6 +136,7 @@ set "VERIFY_CMD=%~2"
 set "VERIFY_LINE=%~3"
 echo.
 echo [STEP] Checking %PKG_ID%
+call :refresh_known_tool_paths
 where %VERIFY_CMD% >nul 2>&1
 if not errorlevel 1 (
   call %VERIFY_LINE%
@@ -151,6 +153,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+call :refresh_known_tool_paths
 where %VERIFY_CMD% >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] %PKG_ID% installed but %VERIFY_CMD% is still not on PATH. Restart terminal or reboot, then rerun.
@@ -168,6 +171,7 @@ exit /b 0
 :ensure_npm
 echo.
 echo [STEP] Checking npm
+call :refresh_known_tool_paths
 where npm.cmd >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] Node.js is present but npm.cmd was not found on PATH. Restart terminal or reinstall Node.js 22.
@@ -185,6 +189,7 @@ exit /b 0
 echo.
 echo [STEP] Checking Node.js 22
 set "NODE_VERSION="
+call :refresh_known_tool_paths
 where node >nul 2>&1
 if not errorlevel 1 (
   for /f "tokens=*" %%V in ('node --version 2^>nul') do set "NODE_VERSION=%%V"
@@ -217,6 +222,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+call :refresh_known_tool_paths
 set "NODE_VERSION="
 for /f "tokens=*" %%V in ('node --version 2^>nul') do set "NODE_VERSION=%%V"
 echo !NODE_VERSION! | findstr /B /C:"v22." >nul 2>&1
@@ -232,6 +238,7 @@ exit /b 0
 :ensure_python312
 echo.
 echo [STEP] Checking Python 3.12
+call :refresh_known_tool_paths
 py -3.12 --version >nul 2>&1
 if not errorlevel 1 (
   py -3.12 --version
@@ -246,10 +253,22 @@ if errorlevel 1 (
   exit /b 1
 )
 
+call :refresh_known_tool_paths
 py -3.12 --version
 if errorlevel 1 (
   echo [ERROR] Python 3.12 installed but py -3.12 verification failed. Restart terminal or reboot, then rerun.
   exit /b 1
 )
 echo [OK] Python 3.12 installed and verified.
+exit /b 0
+
+:refresh_known_tool_paths
+if exist "%ProgramFiles%\Git\cmd\git.exe" set "PATH=%ProgramFiles%\Git\cmd;%PATH%"
+if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "PATH=%ProgramFiles(x86)%\Git\cmd;%PATH%"
+if exist "%ProgramFiles%\nodejs\node.exe" set "PATH=%ProgramFiles%\nodejs;%PATH%"
+if exist "%ProgramFiles%\PowerShell\7\pwsh.exe" set "PATH=%ProgramFiles%\PowerShell\7;%PATH%"
+if exist "%ProgramFiles%\GitHub CLI\gh.exe" set "PATH=%ProgramFiles%\GitHub CLI;%PATH%"
+if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe" set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%PATH%"
+if exist "%LocalAppData%\Microsoft\WindowsApps\winget.exe" set "PATH=%LocalAppData%\Microsoft\WindowsApps;%PATH%"
+if exist "%LocalAppData%\Microsoft\WindowsApps\python.exe" set "PATH=%LocalAppData%\Microsoft\WindowsApps;%PATH%"
 exit /b 0
