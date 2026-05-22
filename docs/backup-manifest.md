@@ -34,6 +34,14 @@ After a successful backup, the script opens `C:\envbk\codex-home-private` in Win
 
 Move or mount `C:\envbk` on the new computer before running `scripts\sync-codex.bat`.
 
+## Path-Fix Safety Backups
+
+During restore, `scripts\adapt-codex-config.ps1` may rewrite source-machine paths in Codex config/state files. Before writing those edits, it stores rollback copies under:
+
+- `%USERPROFILE%\.codex\pathfix-backups`
+
+This path is intentionally separate from `C:\envbk\codex-home-private`. `C:\envbk\codex-home-private` is the portable cross-computer backup; `pathfix-backups` is a target-computer local safety backup for path adaptation only.
+
 ## Not Versioned
 
 These are deliberately excluded from GitHub:

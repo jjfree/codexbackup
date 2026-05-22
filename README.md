@@ -118,6 +118,15 @@ The backup includes real local state such as:
 
 Treat `C:\envbk` as sensitive. It may contain login tokens, connector auth state, prompt history, local conversation DBs, and project metadata. Store it on BitLocker, an encrypted archive, or trusted offline media.
 
+## Backup Locations
+
+There are two different backup locations by design:
+
+- `C:\envbk\codex-home-private` is the portable private export created by `scripts\backup-local-codex.bat`. Copy this folder to the target computer when you want to restore auth, sessions, SQLite state, memories, rules, and skills.
+- `%USERPROFILE%\.codex\pathfix-backups` is created on the target computer by `scripts\adapt-codex-config.ps1` during restore. It stores safety copies of config/state files before the script rewrites source-machine paths to the target Windows profile.
+
+Do not replace `C:\envbk\codex-home-private` with `pathfix-backups`: they serve different purposes. The first is for transport between computers; the second is a local rollback point for path adaptation.
+
 ## Optional Private Codex History Sync
 
 If `C:\envbk\codex-home-private` exists on the new computer, `scripts\sync-codex.bat` automatically restores it. You can also provide another backup path:

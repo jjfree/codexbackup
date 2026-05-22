@@ -66,6 +66,15 @@ C:\envbk\codex-home-private
 
 `C:\envbk` 是敏感資料，可能包含登入 token、connector 授權、prompt 歷史、對話 DB 與專案 metadata。請放在 BitLocker、加密壓縮檔或可信任的離線媒體中。
 
+## 備份路徑說明
+
+這個 repo 會用到兩種不同的備份路徑，目的不同：
+
+- `C:\envbk\codex-home-private` 是 `scripts\backup-local-codex.bat` 建立的可攜式私有備份。若要把 auth、sessions、SQLite state、memories、rules、skills 等資料還原到另一台電腦，請複製這個資料夾。
+- `%USERPROFILE%\.codex\pathfix-backups` 是目標電腦還原時，由 `scripts\adapt-codex-config.ps1` 自動建立的本機安全備份。它保存 config/state 檔案在路徑改寫前的快照。
+
+不要把 `C:\envbk\codex-home-private` 改成 `pathfix-backups`：前者是用來跨電腦搬移的備份包，後者只是還原過程中的本機 rollback 點。
+
 ## 在新電腦還原
 
 還原前提：
