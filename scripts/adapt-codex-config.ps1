@@ -5,7 +5,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$RepoRoot,
 
-  [string]$SourceUserProfile = "C:\Users\James",
+  [string]$SourceUserProfile = "",
 
   [string]$CodexHome = (Join-Path $env:USERPROFILE ".codex"),
 
@@ -13,12 +13,16 @@ param(
 
   [switch]$EnsureProjectDirectories,
 
-  [string]$BackupRoot = "C:\envbk\pathfix-backups"
+  [string]$BackupRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
 $script:TotalReplacementCount = 0
 $script:BackupStamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+if (-not $BackupRoot) {
+  $BackupRoot = Join-Path $CodexHome "pathfix-backups"
+}
 
 function Format-CodexProjectPath {
   param([Parameter(Mandatory = $true)][string]$Path)
@@ -32,7 +36,46 @@ if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
 
 $targetProfile = [Environment]::GetFolderPath("UserProfile").TrimEnd("\").ToLowerInvariant()
 $targetProfileEscaped = $targetProfile.Replace("\", "\\")
-$sourceProfiles = @($SourceUserProfile, "C:\Users\James") | Select-Object -Unique
+
+function Get-DetectedSourceProfiles {
+  $profiles = New-Object System.Collections.Generic.List[string]
+
+  if ($SourceUserProfile) {
+    $profiles.Add($SourceUserProfile.TrimEnd("\"))
+  }
+
+  $candidateFiles = @($ConfigPath)
+  if ($IncludeState) {
+    $candidateFiles += @(
+      (Join-Path $CodexHome "session_index.jsonl"),
+      (Join-Path $CodexHome ".codex-global-state.json"),
+      (Join-Path $CodexHome ".codex-global-state.json.bak")
+    )
+  }
+
+  $profilePattern = [regex]'(?i)c:(?:\\\\|\\)users(?:\\\\|\\)([^\\/"''\]\}\s]+)'
+
+  foreach ($candidateFile in $candidateFiles | Select-Object -Unique) {
+    if (-not (Test-Path -LiteralPath $candidateFile -PathType Leaf)) {
+      continue
+    }
+
+    $text = [System.IO.File]::ReadAllText($candidateFile)
+    foreach ($match in $profilePattern.Matches($text)) {
+      $profiles.Add("C:\Users\$($match.Groups[1].Value)")
+    }
+  }
+
+  return @(
+    $profiles |
+      Where-Object { $_ } |
+      ForEach-Object { $_.TrimEnd("\") } |
+      Where-Object { $_ -and $_.ToLowerInvariant() -ne $targetProfile } |
+      Sort-Object -Unique
+  )
+}
+
+$sourceProfiles = Get-DetectedSourceProfiles
 
 function Convert-CodexPathsInText {
   param([Parameter(Mandatory = $true)][string]$Text)

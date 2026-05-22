@@ -36,15 +36,4 @@ Snapshot date: 2026-05-21
 
 ## Trusted Projects From Source Config
 
-- `C:\Users\James\Documents\New project`
-- `C:\Users\James\Documents\New project 2`
-- `C:\Users\James\Documents\Codex\2026-05-06\plus`
-- `C:\Users\James\Documents\Codex\2026-05-11\vmmenwsl`
-- `C:\Users\James\Documents\Codex\2026-05-11\chrome-2g-2g`
-- `C:\Users\James\Documents\Codex\2026-05-12\size-prompt-git-commit-put-token`
-- `C:\Users\James\Documents\New project 3`
-- `C:\Users\James\Documents\Codex\2026-05-18\5-macd-git-project`
-- `C:\Users\James\Documents\亞洲社交APP`
-- `C:\Users\James\Documents\Codex\2026-05-21\codex-codex`
-
-During restore, `scripts/sync-codex.bat` rewrites the source profile prefix from `C:\Users\James` to the target computer's `%USERPROFILE%` and trusts the local `codexbackup` checkout. Update any project entries manually if their relative locations differ on the target computer.
+Source-machine trusted project paths are machine-specific and are intentionally not listed here for sharing. During restore, `scripts/sync-codex.bat` detects source profile paths such as `C:\Users\<source-user>\...`, rewrites them to the target computer's `%USERPROFILE%`, and trusts the local `codexbackup` checkout. Update any project entries manually if their relative locations differ on the target computer.
