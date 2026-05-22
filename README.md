@@ -96,6 +96,8 @@ This exports private Codex data to:
 C:\envbk\codex-home-private
 ```
 
+After a successful backup, the script opens `C:\envbk\codex-home-private` in Windows Explorer so you can inspect or copy the backup folder.
+
 The backup includes real local state such as:
 
 - `auth.json`

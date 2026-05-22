@@ -30,6 +30,8 @@ Run `scripts\backup-local-codex.bat` on the old computer to export sensitive loc
 
 - `C:\envbk\codex-home-private`
 
+After a successful backup, the script opens `C:\envbk\codex-home-private` in Windows Explorer.
+
 Move or mount `C:\envbk` on the new computer before running `scripts\sync-codex.bat`.
 
 ## Not Versioned

@@ -44,6 +44,8 @@ scripts\backup-local-codex.bat
 C:\envbk\codex-home-private
 ```
 
+備份成功後，腳本會自動用 Windows Explorer 開啟 `C:\envbk\codex-home-private`，方便你確認或複製備份資料夾。
+
 備份內容可能包含：
 
 - `auth.json`

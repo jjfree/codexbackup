@@ -105,6 +105,11 @@ if errorlevel 1 (
 
 echo.
 echo [OK] Codex private backup completed.
+echo [STEP] Opening backup folder: %BACKUP_HOME%
+explorer.exe "%BACKUP_HOME%"
+if errorlevel 1 (
+  echo [WARN] Backup completed, but Windows Explorer could not open %BACKUP_HOME%.
+)
 echo [NEXT] Copy or mount C:\envbk on the target computer before running sync-codex.bat.
 exit /b 0
 
